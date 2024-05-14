@@ -34,7 +34,7 @@ dependencies {
 	implementation 'org.springframework:spring-websocket'
 
 	// front-end 관련
-	implementation 'org.webjars.bower:jquery'
+//	implementation 'org.webjars.bower:jquery:3.5.1'
 
 	// Json관련
 	implementation 'com.google.code.gson:gson:2.10.1'
@@ -44,7 +44,7 @@ dependencies {
 	// https://mvnrepository.com/artifact/org.kurento/kurento-client
 	implementation 'org.kurento:kurento-client:7.0.0'
 	// https://mvnrepository.com/artifact/org.kurento/kurento-utils-js
-	implementation 'org.kurento:kurento-utils:7.0.0'
+//	implementation 'org.kurento:kurento-utils:7.0.0'
 }
 
 tasks.named('test') {
