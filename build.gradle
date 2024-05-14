@@ -1,0 +1,52 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.2.5'
+	id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'SyncCode'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	sourceCompatibility = '17'
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	// websocket
+	implementation 'org.springframework:spring-websocket'
+
+	// front-end 관련
+	implementation 'org.webjars.bower:jquery'
+
+	// Json관련
+	implementation 'com.google.code.gson:gson:2.10.1'
+	implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+
+	// kurento 관련 dependency 2개
+	// https://mvnrepository.com/artifact/org.kurento/kurento-client
+	implementation 'org.kurento:kurento-client:7.0.0'
+	// https://mvnrepository.com/artifact/org.kurento/kurento-utils-js
+	implementation 'org.kurento:kurento-utils:7.0.0'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="container">
+    <div>
+        <table>
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>이름</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="room : ${rooms}">
+                <th> 방 이름:
+                    <td>
+                        <a th:href="@{/joinRoom(roomId=${room.roomId})}" th:text="${room.roomName}"></a>
+                    </td>
+                </th>
+                <th> 인원수:
+                    <td th:text="${room.userCount}"></td>
+                </th>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <a th:href="@{/createRoomForm}" class="btn">방 생성</a>
+</div> <!-- /container -->
+</body>
+</html>
