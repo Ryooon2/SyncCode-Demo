@@ -18,11 +18,6 @@ import java.util.List;
 public class MainController {
     private final KurentoRoomManager roomManager;
 
-//    @GetMapping("/")
-//    public String start(){
-//        return "video";
-//    }
-
     @GetMapping("/")
     public String mainPage(){
         return "home";
@@ -61,6 +56,7 @@ public class MainController {
         String userName = (String) session.getAttribute("userName");
         model.addAttribute("userName", userName);
         model.addAttribute("roomId", roomId);
-        return "video";
+//        return "video";
+        return "video-loopback";
     }
 }

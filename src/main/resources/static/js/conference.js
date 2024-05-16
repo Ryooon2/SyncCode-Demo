@@ -94,6 +94,15 @@ function onExistingParticipants(msg, userName, stream) {
     });
 }
 
+function onNewParticipant(parsedMessage) {
+    var name = parsedMessage.name;
+    if (!participants[name]) {
+        console.log('New participant:', name);
+        receiveVideo(name);
+    }
+}
+
+
 function receiveVideo(name) {
     var video = document.createElement('video');
     video.autoplay = true;

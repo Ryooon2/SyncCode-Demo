@@ -63,6 +63,12 @@ public class KurentoHandler extends TextWebSocketHandler {
                     user.addCandidate(cand, jsonMessage.get("name").getAsString());
                 }
                 break;
+
+            // test 용으로 loopback 만듬.
+            case "loopback":
+                System.out.println("qwer1");
+                joinRoom(jsonMessage, session);
+                registry.getBySession(session).loopback(jsonMessage.get("sdpOffer").getAsString());
         }
     }
 
@@ -77,10 +83,12 @@ public class KurentoHandler extends TextWebSocketHandler {
         final String name = params.get("name").getAsString();
         System.out.println(roomId+name);
 
+        System.out.println("qwer2");
         KurentoRoom room = roomManager.getRoom(roomId);
 
         final KurentoUserSession user = room.join(name, session);
 
+        System.out.println("qwer3");
         registry.register(user);
     }
 
