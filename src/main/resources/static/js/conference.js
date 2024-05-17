@@ -1,191 +1,214 @@
-var ws;
-var participants = {};
+let ws;
+let localStream;
+let participants = {};
+let roomId;
+let userName;
 
-window.onbeforeunload = function() {
-    if (ws) {
-        ws.close();
-    }
-};
+// Initialize WebSocket connection and event handlers
+function initWebSocket() {
+    const dataContainer = document.getElementById('dataContainer');
+    roomId = dataContainer.getAttribute('data-roomid');
+    userName = dataContainer.getAttribute('data-username');
 
-$(document).ready(function() {
-    var roomId = $('#dataContainer').data('roomid');
-    var userName = $('#dataContainer').data('username');
-    getLocalStream(userName, roomId);
-});
-
-function getLocalStream(userName, roomId) {
-    navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-        .then(stream => {
-            document.getElementById('localVideo').srcObject = stream; // 로컬 비디오에 스트림 연결
-            connectWebSocket(userName, roomId, stream);
-        }).catch(error => {
-        console.error("Error accessing media devices.", error);
-    });
-}
-
-function connectWebSocket(userName, roomId, stream) {
     ws = new WebSocket('ws://' + window.location.host + '/signal');
 
-    ws.onopen = function() {
-        sendMessage({
-            id: 'joinRoom',
-            name: userName,
-            room: roomId
-        });
+    ws.onopen = () => {
+        console.log('WebSocket connection opened');
+        joinRoom();
     };
 
-    ws.onmessage = function(message) {
-        var parsedMessage = JSON.parse(message.data);
-        console.info('Received message:', parsedMessage.id);
+    ws.onmessage = (message) => {
+        const parsedMessage = JSON.parse(message.data);
+        console.log('Received message: ' + message.data);
 
         switch (parsedMessage.id) {
             case 'existingParticipants':
-                onExistingParticipants(parsedMessage, userName, stream);
+                onExistingParticipants(parsedMessage.data);
                 break;
             case 'newParticipantArrived':
-                onNewParticipant(parsedMessage);
+                onNewParticipant(parsedMessage.name);
                 break;
-            case 'participantLeft':
-                onParticipantLeft(parsedMessage);
-                break;
-            case 'receiveVideoAnswer':
-                participants[parsedMessage.name].rtcPeer.processAnswer(parsedMessage.sdpAnswer);
+            case 'receiveSdpAnswer':
+                receiveSdpAnswer(parsedMessage);
                 break;
             case 'iceCandidate':
-                participants[parsedMessage.name].rtcPeer.addIceCandidate(parsedMessage.candidate);
+                addIceCandidate(parsedMessage);
+                break;
+            case 'participantLeft':
+                onParticipantLeft(parsedMessage.name);
                 break;
             default:
                 console.error('Unrecognized message', parsedMessage);
         }
     };
+
+    ws.onclose = () => {
+        console.log('WebSocket connection closed');
+    };
 }
 
-function onExistingParticipants(msg, userName, stream) {
-    var video = document.getElementById('localVideo');
-    var options = {
-        localVideo: video,
-        videoStream: stream,
-        mediaConstraints: { audio: true, video: true },
-        onicecandidate: onLocalIceCandidate,
-        configuration: {
-            iceServers: [{urls: 'stun:stun.l.google.com:19302'}]
+// Join the room
+function joinRoom() {
+    const message = {
+        id: 'joinRoom',
+        name: userName,
+        room: roomId
+    };
+    sendMessage(message);
+}
+
+// Handle existing participants
+function onExistingParticipants(data) {
+    data.forEach(participant => {
+        receiveVideo(participant);
+    });
+
+    // Start local video
+    const video = document.getElementById('localVideo');
+    const constraints = {
+        audio: true,
+        video: {
+            width: 640,
+            height: 480
         }
     };
 
-    var rtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(options, function(offerErr) {
-        if (offerErr) return console.error('Error creating WebRtcPeer:', offerErr);
-        this.generateOffer((error, offerSdp) => {
-            if (error) return console.error('Error generating offer:', error);
-            sendMessage({
-                id: "receiveDataFrom",
-                sender: userName,
-                sdpOffer: offerSdp
-            });
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+            localStream = stream;
+            video.srcObject = stream;
+
+            const peer = createPeerConnection(userName);
+            stream.getTracks().forEach(track => peer.addTrack(track, stream));
+        })
+        .catch(error => {
+            console.error('Error accessing media devices.', error);
         });
-    });
-
-    participants[userName] = {
-        name: userName,
-        rtcPeer: rtcPeer
-    };
-
-    msg.data.forEach(name => {
-        receiveVideo(name);
-    });
 }
 
-function onNewParticipant(parsedMessage) {
-    var name = parsedMessage.name;
+// Handle new participant
+function onNewParticipant(name) {
     if (!participants[name]) {
         console.log('New participant:', name);
         receiveVideo(name);
     }
 }
 
-
+// Receive video from a participant
 function receiveVideo(name) {
-    var video = document.createElement('video');
+    const video = document.createElement('video');
+    video.id = name;
     video.autoplay = true;
     video.controls = false;
     document.getElementById('remoteVideos').appendChild(video);
 
-    var options = {
-        remoteVideo: video,
-        onicecandidate: onRemoteIceCandidate.bind(null, name),
-        configuration: { iceServers: [{urls: 'stun:stun.l.google.com:19302'}] }
-    };
-
-    var rtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options, function(error) {
-        if (error) return console.error('Error creating WebRtcPeer:', error);
-        this.generateOffer((err, offerSdp) => {
-            if (err) return console.error('Error generating offer:', err);
-            sendMessage({
-                id: "receiveDataFrom",
-                sender: name,
-                sdpOffer: offerSdp
-            });
-        });
-    });
-
-    participants[name] = {
-        name: name,
-        rtcPeer: rtcPeer
-    };
+    const peer = createPeerConnection(name);
+    participants[name] = { peer, video };
 }
 
-function onParticipantLeft(request) {
-    var participant = participants[request.name];
+function createPeerConnection(name) {
+    const peer = new RTCPeerConnection({
+        iceServers: [
+            { urls: 'stun:43.201.67.51:3478' },
+            { urls: 'turn:43.201.67.51:3478', username: 'root', credential: 'root' }]
+    });
+
+    peer.onicecandidate = (event) => {
+        if (event.candidate) {
+            sendMessage({
+                id: 'onIceCandidate',
+                candidate: event.candidate,
+                name: userName
+            });
+        }
+    };
+
+    peer.ontrack = (event) => {
+        const videoElement = document.getElementById(name);
+        if (videoElement) {
+            videoElement.srcObject = event.streams[0];
+        }
+    };
+
+    if (name !== userName) {
+        peer.createOffer()
+            .then(offer => peer.setLocalDescription(offer))
+            .then(() => {
+                sendMessage({
+                    id: 'receiveDataFrom',
+                    sender: userName,
+                    sdpOffer: peer.localDescription
+                });
+            })
+            .catch(error => console.error('Error creating offer', error));
+    }
+
+    return peer;
+}
+
+// Handle SDP offer/answer
+function receiveSdpAnswer(message) {
+    const peer = participants[message.name].peer;
+    const remoteDesc = new RTCSessionDescription(message.sdpAnswer);
+    peer.setRemoteDescription(remoteDesc).catch(error => console.error('Error setting remote description', error));
+}
+
+// Handle ICE candidates
+function addIceCandidate(message) {
+    const candidate = new RTCIceCandidate(message.candidate);
+    const peer = participants[message.name].peer;
+    peer.addIceCandidate(candidate).catch(error => console.error('Error adding candidate', error));
+}
+
+// Handle participant leaving
+function onParticipantLeft(name) {
+    const participant = participants[name];
     if (participant) {
-        participant.rtcPeer.dispose();
-        var videoElement = document.getElementById('video-' + request.name);
+        participant.peer.close();
+        const videoElement = document.getElementById(name);
         if (videoElement) {
             videoElement.parentNode.removeChild(videoElement);
         }
-        delete participants[request.name];
+        delete participants[name];
     }
 }
 
-function sendMessage(message) {
-    var jsonMessage = JSON.stringify(message);
-    console.log('Sending message:', jsonMessage);
-    ws.send(jsonMessage);
-}
-
-function onLocalIceCandidate(candidate) {
-    console.log("Local candidate:", JSON.stringify(candidate));
-    sendMessage({
-        id: 'onIceCandidate',
-        candidate: candidate,
-        name: localName
-    });
-}
-
-function onRemoteIceCandidate(name, candidate) {
-    console.log("Remote candidate:", JSON.stringify(candidate));
-    sendMessage({
-        id: 'onIceCandidate',
-        candidate: candidate,
-        name: name
-    });
-}
-
+// Leave the room
 function leaveRoom() {
     sendMessage({
         id: 'leaveRoom'
     });
 
-    // 로컬 비디오 스트림 정지
-    const localVideo = document.getElementById('localVideo');
-    if (localVideo.srcObject) {
-        localVideo.srcObject.getTracks().forEach(track => track.stop());
-    }
-    localVideo.srcObject = null;
+    Object.keys(participants).forEach(name => {
+        participants[name].peer.close();
+    });
+    participants = {};
 
-    // 모든 원격 비디오 스트림 정지 및 삭제
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    document.getElementById('localVideo').srcObject = null;
+
     document.getElementById('remoteVideos').innerHTML = '';
 
-    // WebSocket 연결 종료
     if (ws) {
         ws.close();
     }
 }
+
+// Send message to server
+function sendMessage(message) {
+    const jsonMessage = JSON.stringify(message);
+    console.log('Sending message: ' + jsonMessage);
+    ws.send(jsonMessage);
+}
+
+// Initialize WebSocket when the page is loaded
+window.addEventListener('load', initWebSocket);
+
+window.onbeforeunload = function() {
+    if (ws) {
+        ws.close();
+    }
+};

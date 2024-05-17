@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <title>Video Conference</title>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- Kurento Client 라이브러리 추가 -->
-  <script src="https://cdn.jsdelivr.net/npm/kurento-client"></script>
 </head>
 <body>
 <h1>Video Conference Room</h1>
@@ -13,6 +11,6 @@
 <div id="remoteVideos"></div>
 <div id="dataContainer" th:data-roomid="${roomId}" th:data-username="${userName}" style="display:none;"></div>
 <button onclick="leaveRoom()">Leave Room</button>
-<script th:src="@{/js/conferenceV2.js}"></script>
+<script th:src="@{/js/conference.js}"></script>
 </body>
 </html>

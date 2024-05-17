@@ -82,7 +82,7 @@ public class KurentoUserSession implements Closeable {
     // sender 으로부터 데이터를 수신하는 webRtcEndpoint(IncomingMedia) 를
     // 자신의 sdpOffer 를 사용해 구축하는 메서드.
     public void receiveDataFrom(KurentoUserSession sender, String sdpOffer) throws IOException {
-        final String spdAnswer = this.getEndpointForUser(sender).processAnswer(sdpOffer);
+        final String spdAnswer = this.getEndpointForUser(sender).processOffer(sdpOffer);
 
         final JsonObject scParams = new JsonObject();
         scParams.addProperty("id", "receiveSdpAnswer");
@@ -250,12 +250,7 @@ public class KurentoUserSession implements Closeable {
 
     // Test용
     public void loopback(String sdpOffer) throws IOException {
-        if (this.outgoingMedia.getLocalSessionDescriptor() == null) {
-            System.out.println("SDP Offer is not generated yet.");
-            return;
-        }
-
-        final String sdpAnswer = this.outgoingMedia.processAnswer(sdpOffer);
+        final String sdpAnswer = this.outgoingMedia.processOffer(sdpOffer);
 
         this.outgoingMedia.connect(this.outgoingMedia);
 
