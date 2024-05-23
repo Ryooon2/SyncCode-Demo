@@ -46,6 +46,16 @@ _주의 : 이 프로젝트는 webRtc 기술을 간단하게 적용해보기 위�
 2. 이에 A와 B는 연결할 상대를 C로하고 sdpOffer가 담긴 id = 'receiveDataFrom'인 Json 메세지를 Spring server에 전송합니다.
 3. 위에서 설명한 sdp 협상 과정과 같은 맥락으로 json 메세지가 처리되고, A와 B는 C의 미디어 스트림을 수신하게 됩니다.
 
+## 시연 영상
+![2024-05-23 13 14 23](https://github.com/Ryooon2/SyncCode-Demo/assets/138233569/273f28e7-84c1-4f61-88dc-fe7d1ac06b49)
+원본: https://drive.google.com/file/d/1eyhIPzaeft7av6ykqqY-OZns0BEdnjyS/view?usp=sharing
+
+위 시연 영상은 로컬 비디오 스트림을 왼쪽에, 해당 미디어 스트림을 KMS로 보내고 다시 자신에게 loopback한 영상을 오른쪽에 출력한 모습입니다.
+원래의 목표대로 N:M 그룹 영상 통화를 시연 영상으로 남겼다면 더 좋았겠지만, 웹 환경에서 카메라 장치에 접근하려면 HTTPS를 사용해야만 합니다. 
+이러한 제약 때문에, 시연 영상 및 테스트는 로컬 미디어 스트림을 KMS로 보내고, 이를 다시 loopback하는 방식으로 진행하였습니다.
+
+
+
 ## 프로젝트 구조
 - SyncCode.SyncCode_demo.domain.rtc.KurentoHandler:
   - WebSocket 메세지를 처리하는 핸들러 클래스
